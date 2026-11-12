@@ -61,3 +61,23 @@ var originalPrice=catalog.Parts.First(p=>p.Id==generated.Cpu!.Id).EffectivePrice
 generated.Cpu!.CustomPricePKR=1;
 Assert(catalog.Parts.First(p=>p.Id==generated.Cpu.Id).EffectivePricePKR==originalPrice,"budget build does not mutate catalog");
 Console.WriteLine("Budget and catalog size tests passed.");
+
+void Reject(Action action,string description) { try { action(); throw new Exception("Expected rejection: "+description); } catch(InvalidDataException) {} }
+Reject(()=>ComponentValidator.Validate(new CpuComponent{PricePKR=-1}),"negative price");
+Reject(()=>ComponentValidator.Validate(new CpuComponent{PricePKR=ComponentValidator.MaxPrice+1}),"excessive price");
+Reject(()=>ComponentValidator.Validate(new CpuComponent{BaseClockGHz=double.NaN}),"NaN clock");
+Reject(()=>ComponentValidator.Validate(new CaseComponent{SupportedFormFactors=null!}),"null form factors");
+Reject(()=>ComponentValidator.Validate(new StorageComponent{Name="Drive",Brand="Test",StorageType="unknown"},true),"unknown storage type");
+var invalidPath=Path.GetTempFileName();
+try {
+ var service=new CatalogService();
+ File.WriteAllText(invalidPath,"{\"Cpu\":{\"Name\":\"Test\",\"Brand\":\"A\",\"PricePKR\":-10}}");
+ Reject(()=>service.LoadBuildFromJson(invalidPath),"negative saved price");
+ var before=File.ReadAllText(invalidPath);
+ Reject(()=>service.SaveBuildToJson(new PCBuild{Cpu=new CpuComponent{PricePKR=-1}},invalidPath),"invalid build save");
+ Assert(File.ReadAllText(invalidPath)==before,"invalid save preserves existing file");
+} finally {File.Delete(invalidPath);}
+var psuBoundary=new PCBuild{Cpu=new(){TdpWatts=90},Gpu=new(){TdpWatts=220},Psu=new(){RatedWattage=370}};
+Assert(check.EvaluateBuild(psuBoundary).Status==CompatibilityStatus.Warning,"PSU exactly at estimated load warns");
+psuBoundary.Psu.RatedWattage=481; Assert(check.EvaluateBuild(psuBoundary).Status==CompatibilityStatus.Compatible,"PSU exactly at recommendation passes");
+Console.WriteLine("Validation and boundary tests passed.");

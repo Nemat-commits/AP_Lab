@@ -60,6 +60,9 @@ internal static class Program
             priceBox.Text = "23000";
             Pump();
             Assert(vm.Total.Contains("23,000"), "Price override updates total");
+            priceBox.Text = "-1"; Pump();
+            Assert(cpu.HasInvalidPrice && vm.Total == "Invalid price", "Invalid price is not silently included in the total");
+            priceBox.Text = "23000"; Pump();
             vm.Search = "7600X";
             Pump();
             Assert(cpu.Selected?.Name.Contains("1600X") == true, "Filtering must preserve the selected part");
@@ -81,7 +84,19 @@ internal static class Program
                 Assert(ReferenceEquals(combo.SelectedItem, cpu.Selected), "Loaded selection is visible in its dropdown");
             } finally { File.Delete(file); }
             vm.TargetBudget = "200000";
-            vm.BudgetBuildCommand.Execute(null);
+            vm.ConfirmReplace = () => false;
+            var oldPart = cpu.Selected;
+            vm.GenerateBudgetBuildAsync().GetAwaiter().GetResult();
+            Assert(ReferenceEquals(cpu.Selected, oldPart), "Declining replacement preserves the current build");
+            vm.ConfirmReplace = () => true;
+            var staleGeneration = vm.GenerateBudgetBuildAsync();
+            vm.BuildName = "Changed during search";
+            while (!staleGeneration.IsCompleted) { Pump(); Thread.Sleep(5); }
+            staleGeneration.GetAwaiter().GetResult();
+            Assert(ReferenceEquals(cpu.Selected, oldPart) && vm.BudgetMessage.Contains("changed during"), "Stale budget result does not overwrite edits");
+            var generation = vm.GenerateBudgetBuildAsync();
+            while (!generation.IsCompleted) { Pump(); Thread.Sleep(5); }
+            generation.GetAwaiter().GetResult();
             Pump();
             Assert(vm.Slots.All(s => s.Selected != null), "Budget builder fills all slots");
             Assert(vm.Status == "COMPATIBLE", "Generated build is compatible");
