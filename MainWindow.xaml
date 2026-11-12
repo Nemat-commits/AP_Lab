@@ -1,0 +1,64 @@
+<Window x:Class="PCBuilder.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="PC Builder &amp; Compatibility Checker" Width="1440" Height="900" MinWidth="1050" MinHeight="700" Background="{StaticResource Ice}" FontFamily="Segoe UI">
+ <Grid>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <!-- Persistent actions stay visible while either pane scrolls. -->
+  <Border Background="{StaticResource Slate}" Padding="24,16">
+   <DockPanel LastChildFill="True">
+    <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+     <Button Content="CLEAR ALL FIELDS" Background="#FEE2E2" Foreground="#991B1B" FontWeight="Bold" ToolTip="Reset all parts, prices, filters and budget" Command="{Binding NewCommand}"/>
+     <Button Content="Open build" Command="{Binding LoadCommand}"/>
+     <Button Content="Save build" Command="{Binding SaveCommand}"/>
+     <Button Content="+ Add custom part" Background="{StaticResource Amber}" Foreground="White" Command="{Binding CustomCommand}"/>
+    </WrapPanel>
+    <StackPanel><TextBlock Foreground="#FBBF24" FontSize="10" FontWeight="Bold" Text="YOUR OFFLINE PC PLANNING WORKBENCH"/><TextBlock Foreground="White" FontFamily="Georgia" FontSize="23" FontWeight="Bold" Text="PC Builder"/><TextBlock Foreground="#B7C5D6" FontSize="11" Text="Plan confidently. Price locally."/></StackPanel>
+   </DockPanel>
+  </Border>
+  <Border Grid.Row="1" Background="{Binding StatusColor}" Padding="24,10">
+   <DockPanel><TextBlock DockPanel.Dock="Right" Foreground="White" FontWeight="SemiBold" Text="{Binding SlotProgress}"/><StackPanel Orientation="Horizontal"><TextBlock Foreground="White" FontWeight="Bold" Text="{Binding Status}"/><TextBlock Foreground="White" Margin="16,0,0,0" Text="{Binding StatusDetail}"/></StackPanel></DockPanel>
+  </Border>
+  <Grid Grid.Row="2" Margin="20,16"><Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <!-- Budget builder comes first; optional filters are tucked away. -->
+   <Border Background="White" CornerRadius="8" Padding="18"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
+    <TextBlock Text="START HERE" Foreground="{StaticResource Amber}" FontWeight="Bold" FontSize="10"/>
+    <TextBlock Text="Build by budget" FontFamily="Georgia" FontSize="21" FontWeight="Bold" Margin="0,7,0,7"/>
+    <TextBlock Text="Enter what you want to spend. We'll suggest eight compatible parts near your target." TextWrapping="Wrap" Foreground="#52647A" Margin="0,0,0,14"/>
+    <TextBlock Text="YOUR TARGET BUDGET  /  PKR" FontSize="10" FontWeight="Bold" Foreground="#334155"/>
+    <TextBox Text="{Binding TargetBudget, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="15" ToolTip="Enter an exact target in Pakistani rupees"/>
+    <Slider Minimum="50000" Maximum="1000000" TickFrequency="5000" IsSnapToTickEnabled="True" Value="{Binding SliderBudget, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip="Drag to adjust the budget"/>
+    <DockPanel Margin="0,0,0,8"><TextBlock Text="PKR 50,000" FontSize="10" Foreground="#64748B"/><TextBlock DockPanel.Dock="Right" Text="PKR 1,000,000" HorizontalAlignment="Right" FontSize="10" Foreground="#64748B"/></DockPanel>
+    <TextBlock Text="Drag the slider or type an exact budget above." TextWrapping="Wrap" Foreground="#64748B" FontSize="11" Margin="0,0,0,8"/>
+    <Button Content="{Binding GenerateButtonText}" IsEnabled="{Binding CanGenerate}" Background="{StaticResource Navy}" Foreground="White" Command="{Binding BudgetBuildCommand}" Margin="0,4,0,8" Padding="12,11"/>
+    <Border Background="#F4F7FB" CornerRadius="4" Padding="10"><TextBlock Text="{Binding BudgetMessage}" TextWrapping="Wrap" Foreground="#475569" FontSize="11"/></Border>
+    <Button Content="CLEAR ALL FIELDS" Command="{Binding NewCommand}" Background="#FEE2E2" Foreground="#991B1B" FontWeight="Bold" Margin="0,10,0,0" ToolTip="Reset all parts, prices, filters and budget"/>
+    <TextBlock Text="Suggestions use catalog and custom part prices. Your current build is replaced only after confirmation." TextWrapping="Wrap" Foreground="#64748B" FontSize="11" Margin="0,10,0,4"/>
+    <Separator Margin="0,15"/>
+    <Expander Header="Filter parts  (optional)" FontWeight="SemiBold" IsExpanded="False"><StackPanel Margin="0,10,0,0">
+     <TextBlock Text="Filters affect dropdown choices, not budget suggestions." TextWrapping="Wrap" FontWeight="Normal" Foreground="#64748B" FontSize="11" Margin="0,0,0,10"/>
+     <TextBlock Text="BRAND" FontSize="10" FontWeight="Bold"/><ComboBox ItemsSource="{Binding BrandOptions}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Brand, Mode=TwoWay}"/>
+     <TextBlock Text="SOCKET" FontSize="10" FontWeight="Bold"/><ComboBox ItemsSource="{Binding SocketOptions}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Socket, Mode=TwoWay}"/>
+     <TextBlock Text="MAX PRICE PER PART" FontSize="10" FontWeight="Bold"/><ComboBox ItemsSource="{Binding PriceOptions}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding Budget, Mode=TwoWay}"/>
+     <Button Content="Clear filters" Command="{Binding ClearFiltersCommand}" HorizontalAlignment="Left" Margin="0,4,0,0"/>
+    </StackPanel></Expander>
+    <Separator Margin="0,15"/><TextBlock Text="PRICES ARE ESTIMATES" Foreground="{StaticResource Amber}" FontSize="10" FontWeight="Bold"/>
+    <TextBlock Text="Confirm local prices and exact specifications before buying. Enter your own price beside any part." TextWrapping="Wrap" Foreground="#64748B" FontSize="11" Margin="0,8,0,0"/>
+   </StackPanel></ScrollViewer></Border>
+   <!-- Build table -->
+   <Border Grid.Column="2" Background="White" CornerRadius="8" Padding="20"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <DockPanel Margin="0,0,0,12"><StackPanel DockPanel.Dock="Right" Width="220"><TextBlock Text="BUILD NAME" FontSize="10" FontWeight="Bold" Foreground="#64748B"/><TextBox Text="{Binding BuildName, UpdateSourceTrigger=PropertyChanged}"/></StackPanel><StackPanel><TextBlock Text="YOUR CONFIGURATION" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Amber}"/><TextBlock Text="Your PC build" FontFamily="Georgia" FontSize="22" FontWeight="Bold" Margin="0,5,0,2"/><TextBlock Text="Choose parts manually or generate a starting build." Foreground="#64748B" FontSize="11"/></StackPanel></DockPanel>
+    <Border Grid.Row="1" Background="#EFF6FF" CornerRadius="5" Padding="10" Margin="0,0,0,10"><StackPanel><TextBlock Text="YOUR SELECTED PARTS" FontWeight="Bold" FontSize="10" Foreground="#1E3A5F" Margin="0,0,0,5"/><ItemsControl ItemsSource="{Binding Slots}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,2,8,2"><TextBlock Text="{Binding Label}" FontSize="10" Foreground="#64748B"/><TextBlock Text="{Binding SelectedName}" ToolTip="{Binding SelectedName}" FontWeight="SemiBold" Foreground="#1E293B" TextTrimming="CharacterEllipsis" FontSize="11"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+    <Border Grid.Row="2" Background="#F4F7FB" Padding="8,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="105"/><ColumnDefinition Width="*"/><ColumnDefinition Width="135"/><ColumnDefinition Width="135"/><ColumnDefinition Width="55"/></Grid.ColumnDefinitions><TextBlock Text="PART" FontSize="10" Foreground="#64748B" FontWeight="Bold"/><TextBlock Grid.Column="1" Text="SELECTED COMPONENT" FontSize="10" Foreground="#64748B" FontWeight="Bold"/><TextBlock Grid.Column="2" Text="CATALOG PRICE" FontSize="10" Foreground="#64748B" FontWeight="Bold"/><TextBlock Grid.Column="3" Text="YOUR PRICE" FontSize="10" Foreground="#64748B" FontWeight="Bold"/></Grid></Border>
+    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding Slots}"><ItemsControl.ItemTemplate><DataTemplate>
+     <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="8,8"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="105"/><ColumnDefinition Width="*"/><ColumnDefinition Width="135"/><ColumnDefinition Width="135"/><ColumnDefinition Width="55"/></Grid.ColumnDefinitions>
+      <TextBlock Text="{Binding Label}" FontWeight="Bold" VerticalAlignment="Center" Foreground="#1E293B"/>
+      <StackPanel Grid.Column="1" Margin="0,0,12,0"><TextBlock Text="{Binding SelectedName}" ToolTip="{Binding SelectedName}" FontWeight="SemiBold" Foreground="#1E3A5F" TextTrimming="CharacterEllipsis"/><ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Selected, Mode=TwoWay}" IsSynchronizedWithCurrentItem="False" ToolTip="Choose a component"/><TextBlock Text="{Binding Summary}" Foreground="#64748B" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel>
+      <TextBlock Grid.Column="2" Text="{Binding CatalogPrice}" FontFamily="Consolas" VerticalAlignment="Center"/>
+      <StackPanel Grid.Column="3"><TextBox Text="{Binding Price, UpdateSourceTrigger=PropertyChanged}" ToolTip="Leave blank to use catalog price" FontFamily="Consolas"/><TextBlock Text="{Binding PriceHint}" FontSize="9" Foreground="#A16207"/></StackPanel>
+      <Button Grid.Column="4" Content="×" ToolTip="Remove this part" VerticalAlignment="Center" Click="ClearSlot_Click"/>
+     </Grid></Border>
+    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+    <Border Grid.Row="4" Margin="0,12,0,0" Background="#FFFBEB" MaxHeight="120" CornerRadius="4" Padding="10"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="COMPATIBILITY NOTES" FontWeight="Bold" FontSize="10" Foreground="{StaticResource Amber}"/><TextBlock Text="Issues and advisories appear here as you build." Foreground="#64748B" FontSize="11" Margin="0,3,0,0"/><ItemsControl ItemsSource="{Binding Diagnostics}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap" Foreground="#9A3412" Margin="0,4,0,0"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></ScrollViewer></Border>
+   </Grid></Border>
+  </Grid>
+  <Border Grid.Row="3" Background="{StaticResource Slate}" Padding="26,14"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel><TextBlock Foreground="#94A3B8" Text="ESTIMATED POWER" FontSize="10"/><TextBlock Foreground="White" FontFamily="Consolas" FontSize="20" Text="{Binding Estimated}"/><ProgressBar Value="{Binding PowerPercent, Mode=OneWay}" Height="4" Maximum="100" Margin="0,5,30,0"/></StackPanel><StackPanel Grid.Column="1"><TextBlock Foreground="#94A3B8" Text="RECOMMENDED PSU  /  +30%" FontSize="10"/><TextBlock Foreground="White" FontFamily="Consolas" FontSize="20" Text="{Binding Recommended}"/></StackPanel><StackPanel Grid.Column="2" HorizontalAlignment="Right"><TextBlock Foreground="#FBBF24" Text="ESTIMATED TOTAL" FontSize="10"/><TextBlock Foreground="White" FontFamily="Consolas" FontSize="24" FontWeight="Bold" Text="{Binding Total}"/></StackPanel></Grid></Border>
+ </Grid>
+</Window>

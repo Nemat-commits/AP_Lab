@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+TestResults/
+*.user
+publish/
+PCBuilder-Windows-x64.zip
