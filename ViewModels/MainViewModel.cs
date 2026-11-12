@@ -46,12 +46,14 @@ public sealed class MainViewModel : Observable {
   int version=stateVersion; IsGenerating=true; BudgetMessage="Searching compatible combinations…";
   try {
    var parts=catalog.Parts.Select(CatalogService.Clone).ToArray();
-   var suggestion=await Task.Run(()=>new BudgetBuildService().Suggest(parts,target));
-   if(version!=stateVersion){BudgetMessage="Your build or target changed during the search. No changes were applied.";return;}
-   if(suggestion==null){BudgetMessage="No fully compatible eight-part build was found. Your current build was not changed.";return;}
-   ApplyBuild(suggestion); var delta=suggestion.TotalPricePKR()-target; var proximity=Math.Abs(delta)<=target*0.10m?"Within 10%":"Outside 10%; closest sampled match";
-   BudgetMessage=$"{proximity}: PKR {suggestion.TotalPricePKR():N0} ({(delta>=0?"+":"−")}PKR {Math.Abs(delta):N0}). Prices are estimates; check local quotes.";
-  } catch(Exception ex){BudgetMessage=$"Could not generate a build: {ex.Message}";} finally {IsGenerating=false;}
+   var suggestion=await Task.Run(()=>new BudgetBuildService().Suggest(parts,target)).ConfigureAwait(false);
+   await Application.Current.Dispatcher.InvokeAsync(()=>{
+    if(version!=stateVersion){BudgetMessage="Your build or target changed during the search. No changes were applied.";return;}
+    if(suggestion==null){BudgetMessage="No fully compatible eight-part build was found. Your current build was not changed.";return;}
+    ApplyBuild(suggestion); var delta=suggestion.TotalPricePKR()-target; var proximity=Math.Abs(delta)<=target*0.10m?"Within 10%":"Outside 10%; closest sampled match";
+    BudgetMessage=$"{proximity}: PKR {suggestion.TotalPricePKR():N0} ({(delta>=0?"+":"−")}PKR {Math.Abs(delta):N0}). Prices are estimates; check local quotes.";
+   });
+  } catch(Exception ex){await Application.Current.Dispatcher.InvokeAsync(()=>BudgetMessage=$"Could not generate a build: {ex.Message}");} finally {await Application.Current.Dispatcher.InvokeAsync(()=>IsGenerating=false);}
  }
 
  public string BuildName {get=>build.BuildName;set{if(build.BuildName==value)return;build.BuildName=value;MarkChanged();Notify();}}
