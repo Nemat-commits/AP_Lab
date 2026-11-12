@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Data;
@@ -111,7 +112,7 @@ internal static class Program
                     var selector = Descendants<ComboBox>(window).First(c => ReferenceEquals(c.DataContext, slot));
                     Assert(slot.Selected != null && ReferenceEquals(selector.SelectedItem, slot.Selected), $"{phase}: {slot.Label} dropdown shows its selected part");
                     Assert(slot.Choices.Contains(slot.Selected!), $"{phase}: {slot.Label} contains selection in options");
-                    Assert(Descendants<TextBlock>(window).Any(t => ReferenceEquals(t.DataContext, slot) && t.Text == slot.SelectedName && t.Text != "Not selected"), $"{phase}: {slot.Label} name is visible outside the dropdown");
+                    Assert(Descendants<TextBlock>(window).Any(t => ReferenceEquals(t.DataContext, slot) && t.IsVisible && t.Text == slot.SelectedName && t.Text != "Not selected"), $"{phase}: {slot.Label} name is visible outside the dropdown");
                 }
             }
             AssertVisibleSelections("first suggestion");
@@ -130,7 +131,14 @@ internal static class Program
             Assert(vm.BudgetMessage.Contains("PKR") && vm.Status == "COMPATIBLE", "Second budget suggestion succeeds: " + vm.BudgetMessage);
             AssertVisibleSelections("second suggestion");
             Assert(firstNames != string.Join("|", vm.Slots.Select(s => s.Selected?.Id)), "Different target can produce a different suggestion");
-            vm.Brand = "AMD"; vm.Socket = "AM4"; vm.Budget = "50000";
+            vm.Search = "";
+            Descendants<Expander>(window).First().IsExpanded = true; Pump();
+            var brandFilter = Descendants<ComboBox>(window).First(c => BindingOperations.GetBinding(c, Selector.SelectedValueProperty)?.Path?.Path == "Brand");
+            var socketFilter = Descendants<ComboBox>(window).First(c => BindingOperations.GetBinding(c, Selector.SelectedValueProperty)?.Path?.Path == "Socket");
+            var priceFilter = Descendants<ComboBox>(window).First(c => BindingOperations.GetBinding(c, Selector.SelectedValueProperty)?.Path?.Path == "Budget");
+            brandFilter.SelectedValue = "AMD"; socketFilter.SelectedValue = "AM4"; priceFilter.SelectedValue = "50000"; Pump();
+            Assert(vm.Brand == "AMD" && vm.Socket == "AM4" && vm.Budget == "50000", "Filter dropdowns apply the selected values");
+            Assert(cpu.Choices.Where(p => !ReferenceEquals(p, cpu.Selected)).All(p => p.Brand == "AMD" && p.EffectivePricePKR <= 50000 && p is CpuComponent {Socket: "AM4"}), "Dropdown filters narrow choices while preserving selection");
             vm.ConfirmClear = () => false; vm.NewCommand.Execute(null);
             Assert(vm.Slots.Any(s => s.Selected != null), "Cancelled clear preserves build");
             vm.ConfirmClear = () => true;
