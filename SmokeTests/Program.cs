@@ -80,6 +80,12 @@ internal static class Program
                 Assert(cpu.Selected?.Name == "Saved" && vm.Total.Contains("21,000"), "Loading restores the selected item and override in the window");
                 Assert(ReferenceEquals(combo.SelectedItem, cpu.Selected), "Loaded selection is visible in its dropdown");
             } finally { File.Delete(file); }
+            vm.TargetBudget = "200000";
+            vm.BudgetBuildCommand.Execute(null);
+            Pump();
+            Assert(vm.Slots.All(s => s.Selected != null), "Budget builder fills all slots");
+            Assert(vm.Status == "COMPATIBLE", "Generated build is compatible");
+            Assert(vm.BudgetMessage.Contains("PKR"), "Budget result is displayed");
             vm.NewCommand.Execute(null);
             Assert(vm.Slots.All(s => s.Selected == null), "New build clears slots");
             Console.WriteLine("WPF window and selection smoke tests passed.");

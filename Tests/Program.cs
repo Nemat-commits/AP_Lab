@@ -24,7 +24,7 @@ b.Cpu.PricePKR=24000;b.Cpu.CustomPricePKR=23500;var path=Path.GetTempFileName();
 var catalog = new CatalogService();
 catalog.LoadCatalogFromJson(Path.Combine(AppContext.BaseDirectory,"Data","hardware_catalog.json"));
 Assert(Enum.GetValues<HardwareCategory>().All(c=>catalog.FilterByCategory(c).Any()),"all catalog categories load");
-Assert(catalog.FilterByCategory(HardwareCategory.CPU, "Ryzen", "AMD", 25000, "AM4").Count()==1,"combined filters");
+Assert(catalog.FilterByCategory(HardwareCategory.CPU, "1600X", "AMD", 25000, "AM4").Count()==1,"combined filters");
 var selectedCpu = (CpuComponent)CatalogService.Clone(catalog.FilterByCategory(HardwareCategory.CPU, "1600X").First());
 selectedCpu.CustomPricePKR = 1;
 Assert(catalog.FilterByCategory(HardwareCategory.CPU, "1600X").First().EffectivePricePKR==24000,"clone isolates price overrides");
@@ -46,3 +46,18 @@ try {
  var reopened=new CatalogService(customPath); reopened.LoadCatalogFromJson(Path.Combine(AppContext.BaseDirectory,"Data","hardware_catalog.json"));
  Assert(reopened.FilterByCategory(HardwareCategory.CPU,"Local CPU").Single() is CpuComponent { TdpWatts: 65, PricePKR: 5000 },"custom component persists across sessions");
 } finally { if(Directory.Exists(tempDir)) Directory.Delete(tempDir,true); }
+
+Assert(Enum.GetValues<HardwareCategory>().All(c=>catalog.FilterByCategory(c).Count()>=20),"at least 20 parts per category");
+var generator=new BudgetBuildService();
+foreach(var target in new decimal[]{150000,200000,350000}) {
+ var suggestion=generator.Suggest(catalog.Parts,target);
+ Assert(suggestion!=null && suggestion.GetSelectedComponents().Count()==8,"budget builder returns eight parts");
+ Assert(check.EvaluateBuild(suggestion!).Status==CompatibilityStatus.Compatible,"budget builder avoids errors and warnings");
+ Assert(Math.Abs(suggestion!.TotalPricePKR()-target)<=target*0.1m,"budget result within 10 percent for typical targets");
+}
+Assert(generator.Suggest(Array.Empty<HardwareComponent>(),200000)==null,"incomplete catalog returns no suggestion");
+var generated=generator.Suggest(catalog.Parts,200000)!;
+var originalPrice=catalog.Parts.First(p=>p.Id==generated.Cpu!.Id).EffectivePricePKR;
+generated.Cpu!.CustomPricePKR=1;
+Assert(catalog.Parts.First(p=>p.Id==generated.Cpu.Id).EffectivePricePKR==originalPrice,"budget build does not mutate catalog");
+Console.WriteLine("Budget and catalog size tests passed.");
