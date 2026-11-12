@@ -21,7 +21,7 @@ public sealed class SlotSelectorViewModel : Observable {
  public string PriceHint=>HasInvalidPrice?"Enter 0–1,000,000,000 PKR":"Blank = catalog price";
  public string Summary=>selected?.GetSummary()??"No component selected"; public string CatalogPrice=>selected is null?"—":$"PKR {selected.PricePKR:N0}";
  public string Price {get=>price;set {if(price==value)return; price=value; owner.MarkChanged(); Notify(); Notify(nameof(PriceHint)); Notify(nameof(HasInvalidPrice)); if(selected==null)return; if(string.IsNullOrWhiteSpace(value))selected.CustomPricePKR=null; else if(decimal.TryParse(value,out var n)&&n>=0 && n<=ComponentValidator.MaxPrice)selected.CustomPricePKR=n; owner.Recalculate(); }}
- public void Restore(HardwareComponent? value){selected=value;price=value?.CustomPricePKR?.ToString()??"";Notify(nameof(Selected));Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice));}
+ public void Restore(HardwareComponent? value){selected=value;price=value?.CustomPricePKR?.ToString()??"";Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice));}
  public void ClearPrice(){Price="";} public void NotifySelection()=>Notify(nameof(Selected));
 }
 public sealed class MainViewModel : Observable {

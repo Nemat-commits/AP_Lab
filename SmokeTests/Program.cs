@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Media;
+using System.Windows.Data;
 using PCBuilder.Services;
 using System.IO;
 using PCBuilder;
@@ -112,17 +113,23 @@ internal static class Program
             }
             AssertVisibleSelections("first suggestion");
             var firstNames = string.Join("|", vm.Slots.Select(s => s.Selected?.Id));
-            vm.TargetBudget = "350000";
-            var secondGeneration = vm.GenerateBudgetBuildAsync();
-            while (!secondGeneration.IsCompleted) { Pump(); Thread.Sleep(5); }
-            secondGeneration.GetAwaiter().GetResult(); Pump();
+            var budgetBox = Descendants<TextBox>(window).First(t => BindingOperations.GetBinding(t, TextBox.TextProperty)?.Path?.Path == "TargetBudget");
+            var generateButton = Descendants<Button>(window).First(b => ReferenceEquals(b.Command, vm.BudgetBuildCommand));
+            budgetBox.Text = "350000"; Pump();
+            Assert(vm.TargetBudget == "350000", "Budget textbox updates the target");
+            generateButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert(vm.IsGenerating, "Generate button starts a new search");
+            while (vm.IsGenerating) { Pump(); Thread.Sleep(5); }
+            Pump();
             Assert(vm.BudgetMessage.Contains("PKR") && vm.Status == "COMPATIBLE", "Second budget suggestion succeeds: " + vm.BudgetMessage);
             AssertVisibleSelections("second suggestion");
             Assert(firstNames != string.Join("|", vm.Slots.Select(s => s.Selected?.Id)), "Different target can produce a different suggestion");
             vm.Brand = "AMD"; vm.Socket = "AM4"; vm.Budget = "50000";
             vm.ConfirmClear = () => false; vm.NewCommand.Execute(null);
             Assert(vm.Slots.Any(s => s.Selected != null), "Cancelled clear preserves build");
-            vm.ConfirmClear = () => true; vm.NewCommand.Execute(null); Pump();
+            vm.ConfirmClear = () => true;
+            var clearButton = Descendants<Button>(window).First(b => ReferenceEquals(b.Command, vm.NewCommand));
+            clearButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Assert(vm.Slots.All(s => s.Selected == null), "Clear all clears every slot");
             Assert(vm.Search == "" && vm.Brand == "" && vm.Socket == "" && vm.Budget == "" && vm.TargetBudget == "200000", "Clear all resets filters and budget");
             Assert(vm.Total == "PKR 0" && vm.Estimated == "0 W" && vm.SlotProgress == "0 of 8 parts selected", "Clear all resets totals, power and progress");
