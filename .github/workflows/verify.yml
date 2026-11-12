@@ -13,5 +13,7 @@ jobs:
           dotnet-version: 8.0.x
       - name: Build WPF app
         run: dotnet build PCBuilder.Desktop.csproj --configuration Release
+      - name: Exercise WPF window and bindings
+        run: dotnet run --project SmokeTests/PCBuilder.SmokeTests.csproj --configuration Release
       - name: Run domain tests
         run: dotnet run --project Tests/PCBuilder.Tests.csproj --configuration Release
