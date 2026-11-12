@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Data;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using PCBuilder.Services;
 using System.IO;
 using PCBuilder;
@@ -117,7 +119,7 @@ internal static class Program
             var generateButton = Descendants<Button>(window).First(b => ReferenceEquals(b.Command, vm.BudgetBuildCommand));
             budgetBox.Text = "350000"; Pump();
             Assert(vm.TargetBudget == "350000", "Budget textbox updates the target");
-            generateButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            ((IInvokeProvider)new ButtonAutomationPeer(generateButton)).Invoke(); Pump();
             Assert(vm.IsGenerating, "Generate button starts a new search");
             while (vm.IsGenerating) { Pump(); Thread.Sleep(5); }
             Pump();
@@ -129,7 +131,7 @@ internal static class Program
             Assert(vm.Slots.Any(s => s.Selected != null), "Cancelled clear preserves build");
             vm.ConfirmClear = () => true;
             var clearButton = Descendants<Button>(window).First(b => ReferenceEquals(b.Command, vm.NewCommand));
-            clearButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            ((IInvokeProvider)new ButtonAutomationPeer(clearButton)).Invoke(); Pump();
             Assert(vm.Slots.All(s => s.Selected == null), "Clear all clears every slot");
             Assert(vm.Search == "" && vm.Brand == "" && vm.Socket == "" && vm.Budget == "" && vm.TargetBudget == "200000", "Clear all resets filters and budget");
             Assert(vm.Total == "PKR 0" && vm.Estimated == "0 W" && vm.SlotProgress == "0 of 8 parts selected", "Clear all resets totals, power and progress");
