@@ -20,7 +20,7 @@ public sealed class SlotSelectorViewModel : Observable {
  public bool HasInvalidPrice => selected!=null && !string.IsNullOrWhiteSpace(price) && (!decimal.TryParse(price,out var amount) || amount<0 || amount>ComponentValidator.MaxPrice);
  public string PriceHint=>HasInvalidPrice?"Enter 0–1,000,000,000 PKR":"Blank = catalog price";
  public string Summary=>selected?.GetSummary()??"No component selected"; public string CatalogPrice=>selected is null?"—":$"PKR {selected.PricePKR:N0}";
- public string Price {get=>price;set {price=value; owner.MarkChanged(); Notify(); Notify(nameof(PriceHint)); Notify(nameof(HasInvalidPrice)); if(selected==null)return; if(string.IsNullOrWhiteSpace(value))selected.CustomPricePKR=null; else if(decimal.TryParse(value,out var n)&&n>=0 && n<=ComponentValidator.MaxPrice)selected.CustomPricePKR=n; owner.Recalculate(); }}
+ public string Price {get=>price;set {if(price==value)return; price=value; owner.MarkChanged(); Notify(); Notify(nameof(PriceHint)); Notify(nameof(HasInvalidPrice)); if(selected==null)return; if(string.IsNullOrWhiteSpace(value))selected.CustomPricePKR=null; else if(decimal.TryParse(value,out var n)&&n>=0 && n<=ComponentValidator.MaxPrice)selected.CustomPricePKR=n; owner.Recalculate(); }}
  public void Restore(HardwareComponent? value){selected=value;price=value?.CustomPricePKR?.ToString()??"";Notify(nameof(Selected));Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice));}
  public void ClearPrice(){Price="";} public void NotifySelection()=>Notify(nameof(Selected));
 }
@@ -31,7 +31,7 @@ public sealed class MainViewModel : Observable {
  public MainViewModel(){catalog.LoadCatalogFromJson(Path.Combine(AppContext.BaseDirectory,"Data","hardware_catalog.json")); foreach(var c in Enum.GetValues<HardwareCategory>()) Slots.Add(new(this,c)); result=checker.EvaluateBuild(build); BudgetBuildCommand=new RelayCommand(async ()=>await GenerateBudgetBuildAsync()); NewCommand=new RelayCommand(New); SaveCommand=new RelayCommand(Save); LoadCommand=new RelayCommand(Load); CustomCommand=new RelayCommand(Custom); RefreshChoices();}
  public string Search {get=>search;set{search=value;Notify();RefreshChoices();}} public string Brand {get=>brand;set{brand=value;Notify();RefreshChoices();}} public string Socket {get=>socket;set{socket=value;Notify();RefreshChoices();}} public string Budget {get=>budget;set{budget=value;Notify();RefreshChoices();}}
  string targetBudget="200000", budgetMessage="Uses all catalog parts, ignoring filters. Finds a compatible build close to your target.";
- public string TargetBudget {get=>targetBudget;set{targetBudget=value;MarkChanged();Notify();}}
+ public string TargetBudget {get=>targetBudget;set{if(targetBudget==value)return;targetBudget=value;MarkChanged();Notify();}}
  public string BudgetMessage {get=>budgetMessage;set{budgetMessage=value;Notify();}}
  int stateVersion; bool generating;
  public bool IsGenerating {get=>generating;private set{generating=value;Notify();Notify(nameof(GenerateButtonText));}}
@@ -54,7 +54,7 @@ public sealed class MainViewModel : Observable {
   } catch(Exception ex){BudgetMessage=$"Could not generate a build: {ex.Message}";} finally {IsGenerating=false;}
  }
 
- public string BuildName {get=>build.BuildName;set{build.BuildName=value;MarkChanged();Notify();}}
+ public string BuildName {get=>build.BuildName;set{if(build.BuildName==value)return;build.BuildName=value;MarkChanged();Notify();}}
  public string Status=>result.Status.ToString().ToUpperInvariant(); public string StatusColor=>result.Status switch {CompatibilityStatus.Compatible=>"#059669",CompatibilityStatus.Warning=>"#D97706",_=>"#DC2626"};
  public string StatusDetail=>result.Issues.Count+result.Warnings.Count==0 ? (build.GetSelectedComponents().Count()==8?"No compatibility issues found.":"No issues found so far · select all eight components for a complete build.") : $"{result.Issues.Count} issue(s) · {result.Warnings.Count} advisory(s)";
  public IEnumerable<string> Diagnostics=>result.Issues.Concat(result.Warnings); public string Estimated=>$"{result.EstimatedPowerWatts} W"; public string Recommended=>$"{result.RecommendedPsuWatts} W"; public string Total=>Slots.Any(s=>s.HasInvalidPrice)?"Invalid price":$"PKR {build.TotalPricePKR():N0}"; public int PowerPercent=>build.Psu is null||build.Psu.RatedWattage<=0?0:Math.Min(100,(int)(100.0*result.EstimatedPowerWatts/build.Psu.RatedWattage));

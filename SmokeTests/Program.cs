@@ -100,7 +100,7 @@ internal static class Program
             Pump();
             Assert(vm.Slots.All(s => s.Selected != null), "Budget builder fills all slots");
             Assert(vm.Status == "COMPATIBLE", "Generated build is compatible");
-            Assert(vm.BudgetMessage.Contains("PKR"), "Budget result is displayed");
+            Assert(vm.BudgetMessage.Contains("PKR"), "Budget result is displayed: " + vm.BudgetMessage);
             vm.NewCommand.Execute(null);
             Assert(vm.Slots.All(s => s.Selected == null), "New build clears slots");
             Console.WriteLine("WPF window and selection smoke tests passed.");
