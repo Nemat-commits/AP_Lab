@@ -16,22 +16,29 @@ public sealed class SlotSelectorViewModel : Observable {
  public HardwareCategory Category {get;} public string Label => Category==HardwareCategory.CpuCooler?"CPU cooler":Category.ToString();
  public ObservableCollection<HardwareComponent> Choices {get;}=[];
  public SlotSelectorViewModel(MainViewModel owner,HardwareCategory category){this.owner=owner;Category=category;}
- public HardwareComponent? Selected {get=>selected;set { if(Refreshing || ReferenceEquals(selected,value))return; selected=value; price=selected?.CustomPricePKR?.ToString()??""; Notify();Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice)); owner.UpdateSlot(this); }}
+ public HardwareComponent? Selected {get=>selected;set { if(Refreshing || ReferenceEquals(selected,value))return; selected=value; price=selected?.CustomPricePKR?.ToString()??""; Notify();Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(SelectedName));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice)); owner.UpdateSlot(this); }}
  public bool HasInvalidPrice => selected!=null && !string.IsNullOrWhiteSpace(price) && (!decimal.TryParse(price,out var amount) || amount<0 || amount>ComponentValidator.MaxPrice);
  public string PriceHint=>HasInvalidPrice?"Enter 0–1,000,000,000 PKR":"Blank = catalog price";
+ public string SelectedName=>selected is null?"Not selected":$"{selected.Brand} {selected.Name}";
  public string Summary=>selected?.GetSummary()??"No component selected"; public string CatalogPrice=>selected is null?"—":$"PKR {selected.PricePKR:N0}";
  public string Price {get=>price;set {if(price==value)return; price=value; owner.MarkChanged(); Notify(); Notify(nameof(PriceHint)); Notify(nameof(HasInvalidPrice)); if(selected==null)return; if(string.IsNullOrWhiteSpace(value))selected.CustomPricePKR=null; else if(decimal.TryParse(value,out var n)&&n>=0 && n<=ComponentValidator.MaxPrice)selected.CustomPricePKR=n; owner.Recalculate(); }}
- public void Restore(HardwareComponent? value){selected=value;price=value?.CustomPricePKR?.ToString()??"";Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice));}
+ public void Restore(HardwareComponent? value){selected=value;price=value?.CustomPricePKR?.ToString()??"";Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(SelectedName));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice));}
  public void ClearPrice(){Price="";} public void NotifySelection()=>Notify(nameof(Selected));
 }
+public sealed record FilterOption(string Label, string Value);
 public sealed class MainViewModel : Observable {
  readonly CatalogService catalog=new(); readonly CompatibilityChecker checker=new(); PCBuild build=new(); string search="",brand="",socket="",budget=""; CompatibilityResult result;
  public ObservableCollection<SlotSelectorViewModel> Slots {get;}=[];
  public ICommand ClearFiltersCommand {get;} public ICommand BudgetBuildCommand {get;} public ICommand NewCommand {get;} public ICommand SaveCommand {get;} public ICommand LoadCommand {get;} public ICommand CustomCommand {get;}
  public MainViewModel(){catalog.LoadCatalogFromJson(Path.Combine(AppContext.BaseDirectory,"Data","hardware_catalog.json")); foreach(var c in Enum.GetValues<HardwareCategory>()) Slots.Add(new(this,c)); result=checker.EvaluateBuild(build); ClearFiltersCommand=new RelayCommand(ClearFilters); BudgetBuildCommand=new RelayCommand(async ()=>await GenerateBudgetBuildAsync()); NewCommand=new RelayCommand(New); SaveCommand=new RelayCommand(Save); LoadCommand=new RelayCommand(Load); CustomCommand=new RelayCommand(Custom); RefreshChoices();}
+ public IEnumerable<FilterOption> BrandOptions => new[]{new FilterOption("All brands", "")}.Concat(catalog.Parts.Select(p=>p.Brand).Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x=>x).Select(x=>new FilterOption(x,x)));
+ static IEnumerable<string> SocketValues(HardwareComponent p)=>p switch { CpuComponent x=>new[]{x.Socket}, MotherboardComponent x=>new[]{x.Socket}, CpuCoolerComponent x=>x.SupportedSockets, _=>Enumerable.Empty<string>() };
+ public IEnumerable<FilterOption> SocketOptions => new[]{new FilterOption("All sockets", "")}.Concat(catalog.Parts.SelectMany(SocketValues).Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x=>x).Select(x=>new FilterOption(x,x)));
+ public IReadOnlyList<FilterOption> PriceOptions {get;} = [new("Any price", ""), new("Up to PKR 10,000", "10000"), new("Up to PKR 25,000", "25000"), new("Up to PKR 50,000", "50000"), new("Up to PKR 100,000", "100000"), new("Up to PKR 200,000", "200000"), new("Up to PKR 500,000", "500000")];
  public string Search {get=>search;set{search=value;Notify();RefreshChoices();}} public string Brand {get=>brand;set{brand=value;Notify();RefreshChoices();}} public string Socket {get=>socket;set{socket=value;Notify();RefreshChoices();}} public string Budget {get=>budget;set{budget=value;Notify();RefreshChoices();}}
  string targetBudget="200000", budgetMessage="Uses all catalog parts, ignoring filters. Finds a compatible build close to your target.";
- public string TargetBudget {get=>targetBudget;set{if(targetBudget==value)return;targetBudget=value;MarkChanged();Notify();if(!IsGenerating) BudgetMessage="Target changed. Generate a new suggestion to update your build.";}}
+ public string TargetBudget {get=>targetBudget;set{if(targetBudget==value)return;targetBudget=value;MarkChanged();Notify();Notify(nameof(SliderBudget));if(!IsGenerating) BudgetMessage="Target changed. Generate a new suggestion to update your build.";}}
+ public double SliderBudget {get=>decimal.TryParse(TargetBudget,out var value)?(double)Math.Clamp(value,50000m,1000000m):50000; set=>TargetBudget=((long)Math.Round(value/5000)*5000).ToString();}
  public string BudgetMessage {get=>budgetMessage;set{budgetMessage=value;Notify();}}
  int stateVersion; bool generating;
  public bool IsGenerating {get=>generating;private set{generating=value;Notify();Notify(nameof(GenerateButtonText));Notify(nameof(CanGenerate));}}
@@ -71,5 +78,5 @@ public sealed class MainViewModel : Observable {
  void New(){if(!ConfirmClear())return; ClearFilters(); TargetBudget="200000"; BudgetMessage="Enter your budget and generate a compatible starting build."; ApplyBuild(new PCBuild());}
  void Save(){try{if(Slots.Any(s=>s.HasInvalidPrice)){MessageBox.Show("Correct invalid price entries before saving.","Invalid price");return;}var d=new SaveFileDialog{Filter="Build JSON (*.json)|*.json",FileName="pc-build.json"};if(d.ShowDialog()==true)catalog.SaveBuildToJson(build,d.FileName);}catch(Exception ex){MessageBox.Show(ex.Message,"Could not save build");}}
  void Load(){try{var d=new OpenFileDialog{Filter="Build JSON (*.json)|*.json"};if(d.ShowDialog()!=true)return;var loaded=catalog.LoadBuildFromJson(d.FileName);ApplyBuild(loaded);}catch(Exception ex){MessageBox.Show(ex.Message,"Could not load build");}}
- void Custom(){try{var dialog=new CustomPartWindow{Owner=Application.Current.MainWindow};if(dialog.ShowDialog()==true && dialog.Part!=null){catalog.AddCustom(dialog.Part);var slot=Slots.First(x=>x.Category==dialog.Part.Category);var part=CatalogService.Clone(dialog.Part);slot.Choices.Add(part);slot.Selected=part;RefreshChoices();}}catch(Exception ex){MessageBox.Show(ex.Message,"Could not add part");}}
+ void Custom(){try{var dialog=new CustomPartWindow{Owner=Application.Current.MainWindow};if(dialog.ShowDialog()==true && dialog.Part!=null){catalog.AddCustom(dialog.Part);Notify(nameof(BrandOptions));Notify(nameof(SocketOptions));var slot=Slots.First(x=>x.Category==dialog.Part.Category);var part=CatalogService.Clone(dialog.Part);slot.Choices.Add(part);slot.Selected=part;RefreshChoices();}}catch(Exception ex){MessageBox.Show(ex.Message,"Could not add part");}}
 }

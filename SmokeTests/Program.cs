@@ -111,14 +111,18 @@ internal static class Program
                     var selector = Descendants<ComboBox>(window).First(c => ReferenceEquals(c.DataContext, slot));
                     Assert(slot.Selected != null && ReferenceEquals(selector.SelectedItem, slot.Selected), $"{phase}: {slot.Label} dropdown shows its selected part");
                     Assert(slot.Choices.Contains(slot.Selected!), $"{phase}: {slot.Label} contains selection in options");
+                    Assert(Descendants<TextBlock>(window).Any(t => ReferenceEquals(t.DataContext, slot) && t.Text == slot.SelectedName && t.Text != "Not selected"), $"{phase}: {slot.Label} name is visible outside the dropdown");
                 }
             }
             AssertVisibleSelections("first suggestion");
             var firstNames = string.Join("|", vm.Slots.Select(s => s.Selected?.Id));
             var budgetBox = Descendants<TextBox>(window).First(t => BindingOperations.GetBinding(t, TextBox.TextProperty)?.Path?.Path == "TargetBudget");
             var generateButton = Descendants<Button>(window).First(b => ReferenceEquals(b.Command, vm.BudgetBuildCommand));
-            budgetBox.Text = "350000"; Pump();
-            Assert(vm.TargetBudget == "350000", "Budget textbox updates the target");
+            var slider = Descendants<Slider>(window).First();
+            slider.Value = 350000; Pump();
+            Assert(vm.TargetBudget == "350000" && budgetBox.Text == "350000", "Budget slider updates the target and textbox");
+            budgetBox.Text = "375000"; Pump();
+            Assert(vm.TargetBudget == "375000" && slider.Value == 375000, "Exact budget textbox updates slider");
             ((IInvokeProvider)new ButtonAutomationPeer(generateButton)).Invoke(); Pump();
             Assert(vm.IsGenerating, "Generate button starts a new search");
             while (vm.IsGenerating) { Pump(); Thread.Sleep(5); }
@@ -133,7 +137,7 @@ internal static class Program
             var clearButton = Descendants<Button>(window).First(b => ReferenceEquals(b.Command, vm.NewCommand));
             ((IInvokeProvider)new ButtonAutomationPeer(clearButton)).Invoke(); Pump();
             Assert(vm.Slots.All(s => s.Selected == null), "Clear all clears every slot");
-            Assert(vm.Search == "" && vm.Brand == "" && vm.Socket == "" && vm.Budget == "" && vm.TargetBudget == "200000", "Clear all resets filters and budget");
+            Assert(vm.Search == "" && vm.Brand == "" && vm.Socket == "" && vm.Budget == "" && vm.TargetBudget == "200000" && slider.Value == 200000, "Clear all resets filters and budget slider");
             Assert(vm.Total == "PKR 0" && vm.Estimated == "0 W" && vm.SlotProgress == "0 of 8 parts selected", "Clear all resets totals, power and progress");
             Assert(vm.Slots.All(s => s.Choices.Count >= 20), "Clear all restores unfiltered catalog options");
             Console.WriteLine("WPF window and selection smoke tests passed.");
