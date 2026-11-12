@@ -24,6 +24,8 @@ The executable test harnesses are `Tests/Program.cs` (domain and persistence) an
 | Budget | Multiple targets and missing category | Eight compatible parts near target, or no result |
 | WPF | Selection, filter, price edit, reset, saved build restoration | Visible selections, totals, and power track state |
 | WPF budget | Cancel confirmation and edit while searching | Existing build preserved |
+| WPF repeat generation | Generate for two budgets, with filters active | All eight dropdowns contain and display the newly generated selections |
+| Clear all | Cancel and confirm reset after a generated build and filters | Cancel preserves work; confirm resets selections, overrides, filters, target, totals and progress |
 
 ## Remaining limitations
 

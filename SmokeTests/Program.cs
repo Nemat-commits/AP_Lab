@@ -101,8 +101,32 @@ internal static class Program
             Assert(vm.Slots.All(s => s.Selected != null), "Budget builder fills all slots");
             Assert(vm.Status == "COMPATIBLE", "Generated build is compatible");
             Assert(vm.BudgetMessage.Contains("PKR"), "Budget result is displayed: " + vm.BudgetMessage);
-            vm.NewCommand.Execute(null);
-            Assert(vm.Slots.All(s => s.Selected == null), "New build clears slots");
+            void AssertVisibleSelections(string phase)
+            {
+                foreach (var slot in vm.Slots)
+                {
+                    var selector = Descendants<ComboBox>(window).First(c => ReferenceEquals(c.DataContext, slot));
+                    Assert(slot.Selected != null && ReferenceEquals(selector.SelectedItem, slot.Selected), $"{phase}: {slot.Label} dropdown shows its selected part");
+                    Assert(slot.Choices.Contains(slot.Selected!), $"{phase}: {slot.Label} contains selection in options");
+                }
+            }
+            AssertVisibleSelections("first suggestion");
+            var firstNames = string.Join("|", vm.Slots.Select(s => s.Selected?.Id));
+            vm.TargetBudget = "350000";
+            var secondGeneration = vm.GenerateBudgetBuildAsync();
+            while (!secondGeneration.IsCompleted) { Pump(); Thread.Sleep(5); }
+            secondGeneration.GetAwaiter().GetResult(); Pump();
+            Assert(vm.BudgetMessage.Contains("PKR") && vm.Status == "COMPATIBLE", "Second budget suggestion succeeds: " + vm.BudgetMessage);
+            AssertVisibleSelections("second suggestion");
+            Assert(firstNames != string.Join("|", vm.Slots.Select(s => s.Selected?.Id)), "Different target can produce a different suggestion");
+            vm.Brand = "AMD"; vm.Socket = "AM4"; vm.Budget = "50000";
+            vm.ConfirmClear = () => false; vm.NewCommand.Execute(null);
+            Assert(vm.Slots.Any(s => s.Selected != null), "Cancelled clear preserves build");
+            vm.ConfirmClear = () => true; vm.NewCommand.Execute(null); Pump();
+            Assert(vm.Slots.All(s => s.Selected == null), "Clear all clears every slot");
+            Assert(vm.Search == "" && vm.Brand == "" && vm.Socket == "" && vm.Budget == "" && vm.TargetBudget == "200000", "Clear all resets filters and budget");
+            Assert(vm.Total == "PKR 0" && vm.Estimated == "0 W" && vm.SlotProgress == "0 of 8 parts selected", "Clear all resets totals, power and progress");
+            Assert(vm.Slots.All(s => s.Choices.Count >= 20), "Clear all restores unfiltered catalog options");
             Console.WriteLine("WPF window and selection smoke tests passed.");
         }
         finally { window.Close(); app.Shutdown(); }
