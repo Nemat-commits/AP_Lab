@@ -20,3 +20,19 @@ b.Storage.StorageType="SATA";b.Motherboard.SataPorts=0;Assert(check.EvaluateBuil
 Assert(check.EvaluateBuild(new PCBuild()).EstimatedPowerWatts==0,"empty power");
 Assert(check.EvaluateBuild(new PCBuild{Psu=new(){RatedWattage=1}}).EstimatedPowerWatts==0,"partial power");
 b.Cpu.PricePKR=24000;b.Cpu.CustomPricePKR=23500;var path=Path.GetTempFileName();try{var service=new CatalogService();service.SaveBuildToJson(b,path);var restored=service.LoadBuildFromJson(path);Assert(restored.TotalPricePKR()==23500 && restored.Cpu?.CustomPricePKR==23500,"TC-10 persistence");}finally{File.Delete(path);} Console.WriteLine("All tests passed.");
+
+var catalog = new CatalogService();
+catalog.LoadCatalogFromJson(Path.Combine(AppContext.BaseDirectory,"Data","hardware_catalog.json"));
+Assert(Enum.GetValues<HardwareCategory>().All(c=>catalog.FilterByCategory(c).Any()),"all catalog categories load");
+Assert(catalog.FilterByCategory(HardwareCategory.CPU, "Ryzen", "AMD", 25000, "AM4").Count()==1,"combined filters");
+var selectedCpu = (CpuComponent)CatalogService.Clone(catalog.FilterByCategory(HardwareCategory.CPU, "1600X").First());
+selectedCpu.CustomPricePKR = 1;
+Assert(catalog.FilterByCategory(HardwareCategory.CPU, "1600X").First().EffectivePricePKR==24000,"clone isolates price overrides");
+var reference = new PCBuild();
+foreach(var category in Enum.GetValues<HardwareCategory>()) {
+ string name=category switch { HardwareCategory.CPU=>"1600X", HardwareCategory.Motherboard=>"B450M", HardwareCategory.GPU=>"RX 6600", HardwareCategory.RAM=>"Vengeance", HardwareCategory.Storage=>"NV2", HardwareCategory.PSU=>"CV550", HardwareCategory.Case=>"Matrexx", _=>"Hyper 212" };
+ reference.Set(category,CatalogService.Clone(catalog.FilterByCategory(category,name).First()));
+}
+Assert(reference.TotalPricePKR()==169000,"reference catalog total");
+Assert(check.EvaluateBuild(reference).Status==CompatibilityStatus.Compatible,"reference build compatibility");
+Console.WriteLine("Catalog and reference build tests passed.");
