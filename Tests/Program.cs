@@ -9,4 +9,14 @@ b.Ram.RamType="DDR5";Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-0
 b.Ram.ModuleCount=4;Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-03")),"TC-04");b.Ram.ModuleCount=2;
 b.Ram.SpeedMHz=3600;Assert(check.EvaluateBuild(b).Warnings.Any(x=>x.Contains("R-04")),"TC-05");b.Ram.SpeedMHz=3200;
 Assert(check.EvaluateBuild(b).RecommendedPsuWatts==481,"TC-09 power");b.Psu.RatedWattage=400;Assert(check.EvaluateBuild(b).Status==CompatibilityStatus.Warning,"TC-09 warning");b.Psu.RatedWattage=350;Assert(check.EvaluateBuild(b).Status==CompatibilityStatus.Incompatible,"TC-09 error");
+b.Psu.RatedWattage=500;
+b.Case.SupportedFormFactors=["ATX"];Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-05")),"R-05");b.Case.SupportedFormFactors=["mATX"];
+b.Gpu.LengthMm=321;Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-06")),"R-06");b.Gpu.LengthMm=200;
+b.Cooler.HeightMm=166;Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-07")),"R-07 height");b.Cooler.HeightMm=152;
+b.Cooler.SupportedSockets=["AM5"];Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-07")),"R-07 socket");b.Cooler.SupportedSockets=["AM4"];
+b.Cooler.MaxTdpWatts=89;Assert(check.EvaluateBuild(b).Warnings.Any(x=>x.Contains("R-08")),"R-08");b.Cooler.MaxTdpWatts=180;
+b.Motherboard.M2Slots=0;Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-09")),"R-09 NVMe");b.Motherboard.M2Slots=1;
+b.Storage.StorageType="SATA";b.Motherboard.SataPorts=0;Assert(check.EvaluateBuild(b).Issues.Any(x=>x.Contains("R-09")),"R-09 SATA");b.Motherboard.SataPorts=1;b.Storage.StorageType="NVMe";
+Assert(check.EvaluateBuild(new PCBuild()).EstimatedPowerWatts==0,"empty power");
+Assert(check.EvaluateBuild(new PCBuild{Psu=new(){RatedWattage=1}}).EstimatedPowerWatts==0,"partial power");
 b.Cpu.PricePKR=24000;b.Cpu.CustomPricePKR=23500;var path=Path.GetTempFileName();try{var service=new CatalogService();service.SaveBuildToJson(b,path);var restored=service.LoadBuildFromJson(path);Assert(restored.TotalPricePKR()==23500 && restored.Cpu?.CustomPricePKR==23500,"TC-10 persistence");}finally{File.Delete(path);} Console.WriteLine("All tests passed.");

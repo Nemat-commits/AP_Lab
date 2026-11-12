@@ -1,0 +1,17 @@
+name: Verify Windows application
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build WPF app
+        run: dotnet build PCBuilder.Desktop.csproj --configuration Release
+      - name: Run domain tests
+        run: dotnet run --project Tests/PCBuilder.Tests.csproj --configuration Release
