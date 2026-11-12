@@ -22,6 +22,11 @@ internal static class Program
     [STAThread]
     private static void Main()
     {
+        try { Run(); } catch (Exception ex) { Console.WriteLine($"::error::{ex.ToString().Replace("\r", " ").Replace("\n", " ")}"); Environment.ExitCode = 1; }
+    }
+
+    private static void Run()
+    {
         var app = new App();
         app.InitializeComponent();
         var window = new MainWindow();
