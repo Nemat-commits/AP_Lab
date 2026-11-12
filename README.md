@@ -1,1 +1,18 @@
-# AP_Lab
+# PC Builder & Hardware Compatibility Checker
+
+## 1. The project in plain language
+
+This is an offline Windows desktop workbench for planning a PC in Pakistani rupees. Choose a CPU, motherboard, graphics card, memory, storage, power supply, case and CPU cooler. The status banner and diagnostics update as you work. A blank slot is not treated as a failure, so a green banner on a partial build does not mean the build is complete. The power estimate includes CPU and GPU plus 60 W for the rest of the system, and recommends 30% extra capacity.
+
+The catalog prices are illustrative, not live market quotes. Type a local price in a slot to override the catalog price; clear that field to return to the catalog price. Use the cross to clear a slot. Search, brand, socket and budget filters narrow the part dropdowns; already selected parts remain visible. Add a custom part by providing its specifications. Custom parts are kept locally and are available in future sessions. Save and load JSON to keep complete builds and price overrides; back up those files and the custom parts file yourself. No online services are used.
+
+Checks cover socket, RAM generation and limits, RAM speed, motherboard and GPU fit, cooler fit and cooling capacity, storage ports, and PSU capacity. They are simplified planning checks, not guarantees of physical fit or manufacturer support. Verify specifications, BIOS compatibility and real-world prices before buying.
+
+## 2. Technical guide and implementation
+
+- **Requirements:** Windows with .NET 8 SDK (or .NET 8 desktop runtime for a published application). WPF runs on Windows only.
+- **Run:** `dotnet run --project PCBuilder.Desktop.csproj` from the repository root. Build with `dotnet build PCBuilder.Desktop.csproj`. Run the cross-platform domain tests with `dotnet run --project Tests/PCBuilder.Tests.csproj`.
+- **Layers:** `Domain/Models.cs` contains the polymorphic component hierarchy and `PCBuild`; `Services/CompatibilityChecker.cs` implements R-01–R-10; `Services/CatalogService.cs` handles JSON and LINQ; `ViewModels/` manages state and commands; `MainWindow.xaml`, `Views/` and `Themes/` provide WPF presentation.
+- **Persistence:** `Data/hardware_catalog.json` is copied to the output directory. User-created parts are stored at `%LOCALAPPDATA%\PCBuilder\custom_parts.json`; builds are explicitly saved wherever the user chooses. These user files are not automatically backed up to Drive. Build JSON contains full component data and optional `CustomPricePKR`. Catalog choices are cloned so per-build overrides do not mutate the seed catalog.
+- **Rules:** R-01 socket; R-02 RAM type; R-03 DIMM/capacity; R-04 RAM speed advisory; R-05 motherboard form factor; R-06 GPU length; R-07 cooler height/socket; R-08 cooler TDP advisory; R-09 storage ports; R-10 PSU tier. Missing inputs skip their corresponding checks. Power is zero until a CPU or GPU is selected; otherwise `CPU TDP + GPU TDP + 60`, with `ceil(estimate * 1.30)` recommended. This resolves a contradiction in the specification in favour of its prose rather than its sample code (which adds 60 W for any selected component).
+- **Scope and assumptions:** The starter catalog contains sample AM4, AM5 and Intel parts; prices/specifications should be verified. Custom fields are entered using invariant numeric notation, list fields use commas, and storage type must be NVMe or SATA. There is no network integration, PDF export, liquid-loop validation, or bottleneck calculator. This implementation has not been validated on Windows in the current Linux environment; run the commands above on Windows before release.

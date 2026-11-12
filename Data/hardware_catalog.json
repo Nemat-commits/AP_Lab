@@ -1,0 +1,154 @@
+[
+  {
+    "$type": "cpu",
+    "Name": "Ryzen 5 1600X",
+    "Brand": "AMD",
+    "PricePKR": 24000,
+    "Socket": "AM4",
+    "CoreCount": 6,
+    "BaseClockGHz": 3.6,
+    "TdpWatts": 95
+  },
+  {
+    "$type": "cpu",
+    "Name": "Ryzen 5 7600X",
+    "Brand": "AMD",
+    "PricePKR": 65000,
+    "Socket": "AM5",
+    "CoreCount": 6,
+    "BaseClockGHz": 4.7,
+    "TdpWatts": 105
+  },
+  {
+    "$type": "cpu",
+    "Name": "Core i5-12400F",
+    "Brand": "Intel",
+    "PricePKR": 42000,
+    "Socket": "LGA1700",
+    "CoreCount": 6,
+    "BaseClockGHz": 2.5,
+    "TdpWatts": 65
+  },
+  {
+    "$type": "motherboard",
+    "Name": "B450M PRO-VDH MAX",
+    "Brand": "MSI",
+    "PricePKR": 22500,
+    "Socket": "AM4",
+    "Chipset": "B450",
+    "FormFactor": "mATX",
+    "RamType": "DDR4",
+    "RamSlots": 4,
+    "MaxRamGB": 128,
+    "MaxRamSpeedMHz": 3200,
+    "M2Slots": 1,
+    "SataPorts": 4
+  },
+  {
+    "$type": "motherboard",
+    "Name": "B650M",
+    "Brand": "MSI",
+    "PricePKR": 45000,
+    "Socket": "AM5",
+    "Chipset": "B650",
+    "FormFactor": "mATX",
+    "RamType": "DDR5",
+    "RamSlots": 2,
+    "MaxRamGB": 96,
+    "MaxRamSpeedMHz": 5200,
+    "M2Slots": 2,
+    "SataPorts": 4
+  },
+  {
+    "$type": "gpu",
+    "Name": "Radeon RX 6600",
+    "Brand": "AMD",
+    "PricePKR": 58000,
+    "Chipset": "RX 6600",
+    "VramGB": 8,
+    "LengthMm": 200,
+    "TdpWatts": 139
+  },
+  {
+    "$type": "gpu",
+    "Name": "GeForce RTX 4060",
+    "Brand": "NVIDIA",
+    "PricePKR": 90000,
+    "Chipset": "RTX 4060",
+    "VramGB": 8,
+    "LengthMm": 240,
+    "TdpWatts": 115
+  },
+  {
+    "$type": "ram",
+    "Name": "Vengeance 16GB",
+    "Brand": "Corsair",
+    "PricePKR": 12500,
+    "RamType": "DDR4",
+    "CapacityGB": 16,
+    "ModuleCount": 2,
+    "SpeedMHz": 3200
+  },
+  {
+    "$type": "ram",
+    "Name": "DDR5 32GB",
+    "Brand": "Kingston",
+    "PricePKR": 28000,
+    "RamType": "DDR5",
+    "CapacityGB": 32,
+    "ModuleCount": 2,
+    "SpeedMHz": 5600
+  },
+  {
+    "$type": "storage",
+    "Name": "NV2 500GB",
+    "Brand": "Kingston",
+    "PricePKR": 9000,
+    "StorageType": "NVMe",
+    "CapacityGB": 500,
+    "InterfaceType": "PCIe 4.0 M.2"
+  },
+  {
+    "$type": "storage",
+    "Name": "A400 480GB",
+    "Brand": "Kingston",
+    "PricePKR": 8500,
+    "StorageType": "SATA",
+    "CapacityGB": 480,
+    "InterfaceType": "SATA III"
+  },
+  {
+    "$type": "psu",
+    "Name": "CV550",
+    "Brand": "Corsair",
+    "PricePKR": 16000,
+    "RatedWattage": 550,
+    "EfficiencyRating": "80+ Bronze",
+    "IsModular": false
+  },
+  {
+    "$type": "case",
+    "Name": "Matrexx 40",
+    "Brand": "DeepCool",
+    "PricePKR": 17000,
+    "SupportedFormFactors": [
+      "mATX",
+      "Mini-ITX"
+    ],
+    "MaxGpuLengthMm": 320,
+    "MaxCoolerHeightMm": 165
+  },
+  {
+    "$type": "cooler",
+    "Name": "Hyper 212",
+    "Brand": "Cooler Master",
+    "PricePKR": 10000,
+    "CoolerType": "Air",
+    "HeightMm": 152,
+    "SupportedSockets": [
+      "AM4",
+      "LGA1700"
+    ],
+    "MaxTdpWatts": 180
+  }
+]
