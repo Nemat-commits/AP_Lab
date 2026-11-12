@@ -67,7 +67,9 @@ Reject(()=>ComponentValidator.Validate(new CpuComponent{PricePKR=-1}),"negative 
 Reject(()=>ComponentValidator.Validate(new CpuComponent{PricePKR=ComponentValidator.MaxPrice+1}),"excessive price");
 Reject(()=>ComponentValidator.Validate(new CpuComponent{BaseClockGHz=double.NaN}),"NaN clock");
 Reject(()=>ComponentValidator.Validate(new CaseComponent{SupportedFormFactors=null!}),"null form factors");
-Reject(()=>ComponentValidator.Validate(new StorageComponent{Name="Drive",Brand="Test",StorageType="unknown"},true),"unknown storage type");
+Reject(()=>ComponentValidator.Validate(new StorageComponent{Name="Drive",Brand="Test",StorageType="unknown",CapacityGB=500},true),"unknown storage type");
+Reject(()=>ComponentValidator.Validate(new PsuComponent{Name="PSU",Brand="Test",RatedWattage=0},true),"zero PSU wattage");
+Reject(()=>ComponentValidator.Validate(new CpuCoolerComponent{Name="Cooler",Brand="Test",HeightMm=100,MaxTdpWatts=100},true),"empty cooler sockets");
 var invalidPath=Path.GetTempFileName();
 try {
  var service=new CatalogService();

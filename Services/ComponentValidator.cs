@@ -28,6 +28,21 @@ public static class ComponentValidator
             _ => true
         });
         if (invalid) throw new InvalidDataException($"Invalid specifications for {p.Name}.");
+        if (requireIdentity)
+        {
+            bool incomplete = p switch {
+                CpuComponent x => string.IsNullOrWhiteSpace(x.Socket) || x.CoreCount == 0 || x.BaseClockGHz == 0 || x.TdpWatts == 0,
+                MotherboardComponent x => string.IsNullOrWhiteSpace(x.Socket) || string.IsNullOrWhiteSpace(x.FormFactor) || string.IsNullOrWhiteSpace(x.RamType) || x.RamSlots == 0 || x.MaxRamGB == 0 || x.MaxRamSpeedMHz == 0,
+                GpuComponent x => x.VramGB == 0 || x.LengthMm == 0 || x.TdpWatts == 0,
+                RamComponent x => string.IsNullOrWhiteSpace(x.RamType) || x.CapacityGB == 0 || x.ModuleCount == 0 || x.SpeedMHz == 0,
+                StorageComponent x => x.CapacityGB == 0,
+                PsuComponent x => x.RatedWattage == 0,
+                CaseComponent x => x.SupportedFormFactors.Count == 0 || x.MaxGpuLengthMm == 0 || x.MaxCoolerHeightMm == 0,
+                CpuCoolerComponent x => x.SupportedSockets.Count == 0 || x.HeightMm == 0 || x.MaxTdpWatts == 0,
+                _ => true
+            };
+            if (incomplete) throw new InvalidDataException("Enter meaningful, non-zero values for the component's essential specifications.");
+        }
         if (requireIdentity && p is StorageComponent storage && !new[] { "NVMe", "SATA" }.Contains(storage.StorageType, StringComparer.OrdinalIgnoreCase))
             throw new InvalidDataException("Storage type must be NVMe or SATA.");
     }
