@@ -36,3 +36,13 @@ foreach(var category in Enum.GetValues<HardwareCategory>()) {
 Assert(reference.TotalPricePKR()==169000,"reference catalog total");
 Assert(check.EvaluateBuild(reference).Status==CompatibilityStatus.Compatible,"reference build compatibility");
 Console.WriteLine("Catalog and reference build tests passed.");
+
+var tempDir=Path.Combine(Path.GetTempPath(), "pcbuilder-test-"+Guid.NewGuid());
+try {
+ var customPath=Path.Combine(tempDir,"custom.json");
+ var customCatalog=new CatalogService(customPath);
+ customCatalog.LoadCatalogFromJson(Path.Combine(AppContext.BaseDirectory,"Data","hardware_catalog.json"));
+ customCatalog.AddCustom(new CpuComponent { Name="Local CPU", Brand="Local", Socket="AM4", CoreCount=4, BaseClockGHz=3, TdpWatts=65, PricePKR=5000 });
+ var reopened=new CatalogService(customPath); reopened.LoadCatalogFromJson(Path.Combine(AppContext.BaseDirectory,"Data","hardware_catalog.json"));
+ Assert(reopened.FilterByCategory(HardwareCategory.CPU,"Local CPU").Single() is CpuComponent { TdpWatts: 65, PricePKR: 5000 },"custom component persists across sessions");
+} finally { if(Directory.Exists(tempDir)) Directory.Delete(tempDir,true); }

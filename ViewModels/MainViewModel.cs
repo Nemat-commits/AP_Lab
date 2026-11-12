@@ -16,12 +16,12 @@ public sealed class SlotSelectorViewModel : Observable {
  public HardwareCategory Category {get;} public string Label => Category==HardwareCategory.CpuCooler?"CPU cooler":Category.ToString();
  public ObservableCollection<HardwareComponent> Choices {get;}=[];
  public SlotSelectorViewModel(MainViewModel owner,HardwareCategory category){this.owner=owner;Category=category;}
- public HardwareComponent? Selected {get=>selected;set { if(Refreshing || ReferenceEquals(selected,value))return; selected=value; price=selected?.CustomPricePKR?.ToString()??""; Notify();Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice)); owner.UpdateSlot(this); }}
+ public HardwareComponent? Selected {get=>selected;set { if(Refreshing || ReferenceEquals(selected,value))return; selected=value; price=selected?.CustomPricePKR?.ToString()??""; Notify();Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice)); owner.UpdateSlot(this); }}
  public bool HasInvalidPrice => selected!=null && !string.IsNullOrWhiteSpace(price) && (!decimal.TryParse(price,out var amount) || amount<0);
  public string PriceHint=>HasInvalidPrice?"Enter a non-negative amount":"Blank = catalog price";
  public string Summary=>selected?.GetSummary()??"No component selected"; public string CatalogPrice=>selected is null?"—":$"PKR {selected.PricePKR:N0}";
  public string Price {get=>price;set {price=value; Notify(); Notify(nameof(PriceHint)); Notify(nameof(HasInvalidPrice)); if(selected==null)return; if(string.IsNullOrWhiteSpace(value)){selected.CustomPricePKR=null; owner.Recalculate();} else if(decimal.TryParse(value,out var n)&&n>=0){selected.CustomPricePKR=n;owner.Recalculate();} }}
- public void Restore(HardwareComponent? value){selected=value;price=value?.CustomPricePKR?.ToString()??"";Notify(nameof(Selected));Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));}
+ public void Restore(HardwareComponent? value){selected=value;price=value?.CustomPricePKR?.ToString()??"";Notify(nameof(Selected));Notify(nameof(Price));Notify(nameof(Summary));Notify(nameof(CatalogPrice));Notify(nameof(PriceHint));Notify(nameof(HasInvalidPrice));}
  public void ClearPrice(){Price="";} public void NotifySelection()=>Notify(nameof(Selected));
 }
 public sealed class MainViewModel : Observable {
@@ -37,8 +37,9 @@ public sealed class MainViewModel : Observable {
  public void UpdateSlot(SlotSelectorViewModel slot){build.Set(slot.Category,slot.Selected);Recalculate();}
  public void Recalculate(){result=checker.EvaluateBuild(build); foreach(var n in new[]{nameof(Status),nameof(StatusColor),nameof(StatusDetail),nameof(Diagnostics),nameof(Estimated),nameof(Recommended),nameof(Total),nameof(PowerPercent)})Notify(n);}
  void RefreshChoices(){decimal? max=decimal.TryParse(budget,out var n)&&n>=0?n:null; foreach(var s in Slots){s.Refreshing=true; s.Choices.Clear(); if(s.Selected!=null) s.Choices.Add(s.Selected); foreach(var p in catalog.FilterByCategory(s.Category,search,brand,max,socket)) if(p.Id!=s.Selected?.Id) s.Choices.Add(CatalogService.Clone(p)); s.Refreshing=false; s.NotifySelection();}}
- void New(){build=new();foreach(var s in Slots)s.Restore(null);Notify(nameof(BuildName));Recalculate();}
+ public void ApplyBuild(PCBuild loaded){build=loaded;foreach(var s in Slots){s.Refreshing=true;s.Restore(build.GetSelectedComponents().FirstOrDefault(p=>p.Category==s.Category));}Notify(nameof(BuildName));RefreshChoices();Recalculate();}
+ void New()=>ApplyBuild(new PCBuild());
  void Save(){try{if(Slots.Any(s=>s.HasInvalidPrice)){MessageBox.Show("Correct invalid price entries before saving.","Invalid price");return;}var d=new SaveFileDialog{Filter="Build JSON (*.json)|*.json",FileName="pc-build.json"};if(d.ShowDialog()==true)catalog.SaveBuildToJson(build,d.FileName);}catch(Exception ex){MessageBox.Show(ex.Message,"Could not save build");}}
- void Load(){try{var d=new OpenFileDialog{Filter="Build JSON (*.json)|*.json"};if(d.ShowDialog()!=true)return;var loaded=catalog.LoadBuildFromJson(d.FileName);build=loaded;foreach(var s in Slots)s.Restore(build.GetSelectedComponents().FirstOrDefault(p=>p.Category==s.Category));Notify(nameof(BuildName));RefreshChoices();Recalculate();}catch(Exception ex){MessageBox.Show(ex.Message,"Could not load build");}}
- void Custom(){try{var dialog=new CustomPartWindow{Owner=Application.Current.MainWindow};if(dialog.ShowDialog()==true && dialog.Part!=null){catalog.AddCustom(dialog.Part);RefreshChoices();var slot=Slots.First(x=>x.Category==dialog.Part.Category);slot.Selected=slot.Choices.First(p=>p.Id==dialog.Part.Id);}}catch(Exception ex){MessageBox.Show(ex.Message,"Could not add part");}}
+ void Load(){try{var d=new OpenFileDialog{Filter="Build JSON (*.json)|*.json"};if(d.ShowDialog()!=true)return;var loaded=catalog.LoadBuildFromJson(d.FileName);ApplyBuild(loaded);}catch(Exception ex){MessageBox.Show(ex.Message,"Could not load build");}}
+ void Custom(){try{var dialog=new CustomPartWindow{Owner=Application.Current.MainWindow};if(dialog.ShowDialog()==true && dialog.Part!=null){catalog.AddCustom(dialog.Part);var slot=Slots.First(x=>x.Category==dialog.Part.Category);var part=CatalogService.Clone(dialog.Part);slot.Choices.Add(part);slot.Selected=part;RefreshChoices();}}catch(Exception ex){MessageBox.Show(ex.Message,"Could not add part");}}
 }

@@ -1,6 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media;
+using PCBuilder.Services;
+using System.IO;
 using PCBuilder;
 using PCBuilder.Domain;
 using PCBuilder.ViewModels;
@@ -17,6 +20,16 @@ internal static class Program
         var frame = new DispatcherFrame();
         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
         Dispatcher.PushFrame(frame);
+    }
+
+    private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T match) yield return match;
+            foreach (var nested in Descendants<T>(child)) yield return nested;
+        }
     }
 
     [STAThread]
@@ -38,22 +51,35 @@ internal static class Program
             var vm = (MainViewModel)window.DataContext;
             Assert(vm.Slots.Count == 8, "Eight slots should be shown");
             var cpu = vm.Slots.First(s => s.Category == HardwareCategory.CPU);
-            cpu.Selected = cpu.Choices.First(p => p.Name.Contains("1600X"));
+            var combo = Descendants<ComboBox>(window).First(c => ReferenceEquals(c.DataContext, cpu));
+            combo.SelectedItem = cpu.Choices.First(p => p.Name.Contains("1600X"));
             Pump();
             Assert(vm.Total.Contains("24,000"), "CPU selection updates total");
             Assert(vm.Estimated == "155 W", "CPU selection updates power");
-            cpu.Price = "23000";
+            var priceBox = Descendants<TextBox>(window).First(t => ReferenceEquals(t.DataContext, cpu));
+            priceBox.Text = "23000";
             Pump();
             Assert(vm.Total.Contains("23,000"), "Price override updates total");
             vm.Search = "7600X";
             Pump();
             Assert(cpu.Selected?.Name.Contains("1600X") == true, "Filtering must preserve the selected part");
             Assert(vm.Total.Contains("23,000"), "Filtering must preserve the override");
-            cpu.Price = "";
+            priceBox.Text = "";
+            Pump();
             Assert(vm.Total.Contains("24,000"), "Clearing an override restores the catalog price");
             cpu.Selected = null;
             Pump();
-            Assert(vm.Total.EndsWith("0"), "Clearing a slot updates total");
+            Assert(vm.Total == "PKR 0", "Clearing a slot updates total");
+            var file = Path.GetTempFileName();
+            try {
+                var repository = new CatalogService();
+                var saved = new PCBuild { Cpu = new CpuComponent { Name = "Saved", Brand = "Test", Socket = "AM4", PricePKR = 24000, CustomPricePKR = 21000, TdpWatts = 65 } };
+                repository.SaveBuildToJson(saved, file);
+                vm.ApplyBuild(repository.LoadBuildFromJson(file));
+                Pump();
+                Assert(cpu.Selected?.Name == "Saved" && vm.Total.Contains("21,000"), "Loading restores the selected item and override in the window");
+                Assert(ReferenceEquals(combo.SelectedItem, cpu.Selected), "Loaded selection is visible in its dropdown");
+            } finally { File.Delete(file); }
             vm.NewCommand.Execute(null);
             Assert(vm.Slots.All(s => s.Selected == null), "New build clears slots");
             Console.WriteLine("WPF window and selection smoke tests passed.");
