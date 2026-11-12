@@ -17,3 +17,15 @@ jobs:
         run: dotnet run --project SmokeTests/PCBuilder.SmokeTests.csproj --configuration Release
       - name: Run domain tests
         run: dotnet run --project Tests/PCBuilder.Tests.csproj --configuration Release
+      - name: Publish self-contained Windows x64 app
+        run: dotnet publish PCBuilder.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true --output publish
+      - name: Package Windows app
+        shell: pwsh
+        run: Compress-Archive -Path publish/* -DestinationPath PCBuilder-Windows-x64.zip
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PCBuilder-Windows-x64
+          path: PCBuilder-Windows-x64.zip
+          retention-days: 90
+          if-no-files-found: error
